@@ -16,9 +16,10 @@ on:
           - assembleDebug
           - assembleRelease
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# NOTE: no "concurrency" block here on purpose.
+# A concurrency group with cancel-in-progress cancels a running Android
+# build whenever a new run for the same ref starts, which aborted jobs
+# that were already compiling. Let each run finish instead.
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.daemon=false"
@@ -59,6 +60,20 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./android/gradlew
+
+      # Cache Gradle downloads + the prebuilt native artifacts between runs so
+      # repeat builds are much faster. android/ is regenerated each run by
+      # prebuild, so the cache is a pure speed optimisation, never correctness.
+      - name: Cache Gradle files
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-android-${{ hashFiles('package-lock.json', 'app.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-android-
 
       - name: Build APK (${{ github.event.inputs.build_variant || 'assembleDebug' }})
         working-directory: ./android
