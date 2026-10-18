@@ -16,11 +16,6 @@ on:
           - assembleDebug
           - assembleRelease
 
-# NOTE: no "concurrency" block here on purpose.
-# A concurrency group with cancel-in-progress cancels a running Android
-# build whenever a new run for the same ref starts, which aborted jobs
-# that were already compiling. Let each run finish instead.
-
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.daemon=false"
   node-version: '22'
@@ -57,6 +52,16 @@ jobs:
       # which also generates build.gradle and the Gradle wrapper.
       - name: Prebuild (expo prebuild --platform android)
         run: npx --yes expo prebuild --platform android --no-install --clean
+
+      # react-native 0.86 defaults debuggableVariants to
+      # ["debug", "debugOptimized"], which makes Gradle build the 'debug' variant
+      # WITHOUT the JS bundle. The installed APK then starts, finds no bundle on
+      # the device and shows "Unable to load script. Make sure you're running Metro
+      # or that your bundle 'index.android.bundle' is packaged correctly.".
+      # Emptying the list makes assembleDebug embed index.android.bundle so the APK
+      # runs standalone, which is the whole point of the artifact.
+      - name: Embed JS bundle in the debug APK
+        run: python3 scripts/embed-js-bundle.py android
 
       - name: Make gradlew executable
         run: chmod +x ./android/gradlew
