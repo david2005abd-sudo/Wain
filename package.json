@@ -48,10 +48,5 @@
     "lint": "eslint App.tsx components lib screens",
     "test:browser": "node scripts/test-app.cjs"
   },
-  "private": true,
-  "overrides": {
-    "expo-location": {
-      "@expo/image-utils": "0.11.5"
-    }
-  }
+  "private": true
 }
